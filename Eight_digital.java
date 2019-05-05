@@ -1,13 +1,13 @@
-import java.awt.*;
+import java.awt.GridLayout;
 import javax.swing.*;
 import java.awt.event.*;
 import java.util.*;
 
 class panel extends JPanel implements ActionListener {
-    int a[][];
-    public int blank_position[];
-    public JButton[] cells;
-    int go[][] = {{0, 1}, {0, -1}, {1, 0}, {-1, 0}};
+    int a[][]; //九宫格
+    public int blank_position[]; //空格的位置
+    public JButton[] cells; //九宫格对应的按钮
+    int go[][] = {{0, 1}, {0, -1}, {1, 0}, {-1, 0}}; //可移动的方向（上下左右）
 
     public panel() {
         a = new int[3][3];
@@ -30,11 +30,12 @@ class panel extends JPanel implements ActionListener {
 //                System.out.println(a[i][j]);
 //            }
 //        }
+        //初始空格坐标（2，2）
         blank_position[0] = 2;
         blank_position[1] = 2;
     }
 
-    public boolean judge_move(int pressButton) {
+    public boolean judge_move(int pressButton) { //判断当前点击的按钮能否移动（即周围是否有空格）
         int loc_x = pressButton / 3;
         int loc_y = pressButton - loc_x * 3;
         for (int i = 0; i < 4; i++) {
@@ -48,7 +49,7 @@ class panel extends JPanel implements ActionListener {
         return false;
     }
 
-    public void actionPerformed(ActionEvent e) {
+    public void actionPerformed(ActionEvent e) { //为九宫格按钮添加点击事件
         for (int i = 0; i < 9; i++) {
             if (e.getSource() == cells[i]) {
 //                System.out.println(i + 1);
@@ -64,7 +65,7 @@ class panel extends JPanel implements ActionListener {
         }
     }
 
-    public int[][] getgrid() {
+    public int[][] getgrid() { //获取当前的九宫格状态
         for (int i = 0; i < 3; i++) {
             for (int j = 0; j < 3; j++) {
                 String s = cells[i * 3 + j].getText();
@@ -79,9 +80,9 @@ class panel extends JPanel implements ActionListener {
 }
 
 class func extends JPanel implements ActionListener {
-    panel first, second;
-    JButton bu1, bu2, bu3, bu4, bu5, bu6;
-    int last_grid[][]; //init上次打乱的结果
+    panel first, second;  //first是左边的初始状态，second是右边的目标状态
+    JButton bu1, bu2, bu3, bu4, bu5, bu6; //6个功能按钮
+    int last_grid[][]; //左边上次打乱的结果 这是为了比较三个算法在同一初始状态下恢复到目标状态要用到的
     public func(panel init, panel goal) {
         first = init;
         second = goal;
@@ -122,7 +123,7 @@ class func extends JPanel implements ActionListener {
     }
 
     public void actionPerformed(ActionEvent e) {
-        if (e.getSource() == bu1) {
+        if (e.getSource() == bu1) { //随机打乱初始状态并保存为last_grid;
             int[][] t = first.getgrid();
             for(int i=0;i<3;i++){
                 for(int j=0;j<3;j++){
@@ -141,7 +142,7 @@ class func extends JPanel implements ActionListener {
             };
             thread.start();
         }
-        if (e.getSource() == bu2) {
+        if (e.getSource() == bu2) { //随机打乱目标状态
             Thread thread = new Thread() {
                 public void run() {
                     Random ran = new Random();
@@ -154,26 +155,53 @@ class func extends JPanel implements ActionListener {
             };
             thread.start();
         }
-        if (e.getSource() == bu3 ){//dfs
-            int t[][] = first.getgrid();
-            for(int i=0; i<3;i++) {
-                for (int j = 0; j < 3; j++) {
-                    System.out.print(t[i][j]);
-                    System.out.print(" ");
+        if (e.getSource() == bu3 ) { //dfs算法
+            Thread thread = new Thread() {
+                public void run() {
+                    dfs_solve dfs = new dfs_solve(first.getgrid(), second.getgrid());
+                    String way = dfs.getMove();
+                    String s = "";
+                    for (int i = 0; i < way.length(); i++) {
+                        synchronized (this) {
+                            if (way.charAt(i) == '1') {
+                                int press = first.blank_position[0] * 3 + first.blank_position[1] - 1;
+                                first.cells[press].doClick(100);
+                                s += "左";
+                            }
+                            if (way.charAt(i) == '2') {
+                                int press = first.blank_position[0] * 3 + first.blank_position[1] + 1;
+                                first.cells[press].doClick(100);
+                                s += "右";
+
+                            }
+                            if (way.charAt(i) == '3') {
+                                int press = (first.blank_position[0] - 1) * 3 + first.blank_position[1];
+                                first.cells[press].doClick(100);
+                                s += "上";
+
+                            }
+                            if (way.charAt(i) == '4') {
+                                int press = (first.blank_position[0] + 1) * 3 + first.blank_position[1];
+                                first.cells[press].doClick(100);
+                                s += "下";
+                            }
+                        }
+                    }
+                    String msg="dfs用时(ms)："+String.valueOf(dfs.time)+"\n操作："+s;
+                    JOptionPane.showMessageDialog(null, msg);
                 }
-                System.out.print("\n");
-            }
-            System.out.print("\n");
+            };
+            thread.start();
         }
-        if (e.getSource() == bu4 ){//bfs
-            first.getgrid();
-            second.getgrid();
+        //下面是两个算法按钮，你们可以照着我的写，建一个bfs class和A* class
+
+        if (e.getSource() == bu4 ){//bfs算法
+
         }
-        if (e.getSource() == bu5 ){//A*
-            first.getgrid();
-            second.getgrid();
+        if (e.getSource() == bu5 ){//A*算法
+
         }
-        if (e.getSource() == bu6 ) {//reback init
+        if (e.getSource() == bu6 ) { //回退到上一个初始状态
             for (int i = 0; i < 3; i++) {
                 for (int j = 0; j < 3; j++) {
                     System.out.print(last_grid[i][j]);
@@ -193,7 +221,159 @@ class func extends JPanel implements ActionListener {
         }
     }
 }
-
+class dfs_solve{
+    int blank_x;
+    int blank_y;
+    String  goal;
+    int[][] start;
+    public long time;
+    int go[][] = {{0,1},{0,-1},{1,0},{-1,0}};
+    private static final int left = 1;
+    private static final int right = 2;
+    private static final int up = 3;
+    private static final int down = 4;
+    private List<Integer> moveArr = new LinkedList<>();
+    private Set<String> statusSet = new HashSet<>();
+    private boolean canMove(int dir){
+        switch (dir){
+            case left:
+                return blank_y>0;
+            case right:
+                return blank_y<2;
+            case up:
+                return blank_x>0;
+            case down:
+                return blank_x<2;
+        }
+        return false;
+    }
+    private void move(int dir){
+        int t;
+        switch (dir){
+            case left:
+                t = start[blank_x][blank_y-1];
+                start[blank_x][blank_y-1] = 0;
+                start[blank_x][blank_y] = t;
+                blank_y -= 1;
+                break;
+            case right:
+                t = start[blank_x][blank_y+1];
+                start[blank_x][blank_y+1] = 0;
+                start[blank_x][blank_y] = t;
+                blank_y += 1;
+                break;
+            case up:
+                t = start[blank_x-1][blank_y];
+                start[blank_x-1][blank_y] = 0;
+                start[blank_x][blank_y] = t;
+                blank_x -= 1;
+                break;
+            case down:
+                t = start[blank_x+1][blank_y];
+                start[blank_x+1][blank_y] = 0;
+                start[blank_x][blank_y] = t;
+                blank_x += 1;
+                break;
+        }
+        moveArr.add(dir);
+    }
+    private void move_back(int dir){ // 撤销更改
+        int t;
+        switch (dir){
+            case left:
+                t = start[blank_x][blank_y+1];
+                start[blank_x][blank_y+1] = 0;
+                start[blank_x][blank_y] = t;
+                blank_y += 1;
+                break;
+            case right:
+                t = start[blank_x][blank_y-1];
+                start[blank_x][blank_y-1] = 0;
+                start[blank_x][blank_y] = t;
+                blank_y -= 1;
+                break;
+            case up:
+                t = start[blank_x+1][blank_y];
+                start[blank_x+1][blank_y] = 0;
+                start[blank_x][blank_y] = t;
+                blank_x += 1;
+                break;
+            case down:
+                t = start[blank_x-1][blank_y];
+                start[blank_x-1][blank_y] = 0;
+                start[blank_x][blank_y] = t;
+                blank_x -= 1;
+                break;
+        }
+        moveArr.remove(moveArr.size()-1);
+    }
+    private String getStatus(){
+        String s = "";
+        for(int i=0;i<3;i++){
+            for(int j=0;j<3;j++){
+                s += String.valueOf(start[i][j]);
+            }
+        }
+        return s;
+    }
+    private boolean dfs(int dir){
+        if(moveArr.size()>=50)
+            return false;
+        if(canMove(dir)){
+            move(dir);
+            String status = getStatus();
+            if(status.equals(goal))
+                return true;
+            if (statusSet.contains(status)) {
+                move_back(dir);
+                return false;
+            }
+            statusSet.add(status);
+            boolean dfsok = dfs(left) || dfs(right) || dfs(up) || dfs(down);
+            if(dfsok)
+                return true;
+            move_back(dir);
+            return false;
+        }
+        return false;
+    }
+    private boolean solve(){
+        String status = getStatus();
+        statusSet.add(status);
+        return dfs(left) || dfs(right) || dfs(up) || dfs(down);
+    }
+    public dfs_solve(int[][] first,int[][] second){
+        start = new int[3][3];
+        goal = "";
+        for(int i=0;i<3;i++){
+            for(int j=0;j<3;j++){
+                if(first[i][j]==0){
+                    blank_x=i;
+                    blank_y=j;
+                }
+                start[i][j] = first[i][j];
+                goal += String.valueOf(second[i][j]);
+            }
+        }
+        long startTime =  System.currentTimeMillis();
+        if(solve()){
+            System.out.println("成功");
+            System.out.println(getMove());
+        }
+        else{
+            System.out.println("当前dfs深度下无法恢复成目标状态");
+        }
+        long endTime =  System.currentTimeMillis();
+        time = endTime - startTime;
+    }
+    public String getMove(){
+        String way = "";
+        for(int i=0;i<moveArr.size();i++){
+            way += Integer.toString(moveArr.get(i));
+        }
+        return way;
+    }
+}
 public class Eight_digital extends JFrame {
     public Eight_digital(String title) {
         this.setTitle(title);
